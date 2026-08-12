@@ -73,8 +73,10 @@ Two distinct concerns, kept separate:
 
 Three roles — `customer`, `staff`, `admin` — via `@requires`/`@restrict` on the service:
 - `customer`: read own Customer/Transaction/Redemption records; create own Redemption.
-- `staff`: create Transaction records (record a purchase, POS or Online).
+- `staff`: create Transaction records (record a purchase, POS or Online); no access to RewardPolicy/TierThreshold.
 - `admin`: full CRUD on everything, including RewardPolicy, TierThreshold, and read access to the change-tracking Change History.
+
+RewardPolicy/TierThreshold access is admin-only for both read and write — confirmed against the source doc's Key Features table, which names reward policies only next to Admin; Customer's and Staff's listed functionality never mentions viewing rates.
 
 Mocked users (`alice`/customer, `bob`/staff, `carol`/admin) for local BAS dev via CAP's built-in mock auth; XSUAA role collections for the deployed Cloud Foundry target.
 
@@ -82,6 +84,7 @@ Mocked users (`alice`/customer, `bob`/staff, `carol`/admin) for local BAS dev vi
 
 One Fiori Elements app bundle in `app/`, bound to the single CAP service:
 - List Report on Customer → Object Page with embedded Transactions and Redemptions facets (via the associations), plus a Change History facet.
+- A direct Transactions List Report (staff-facing) for recording a purchase — pick/search a customer, enter channel/amount — rather than only via the nested facet. Added because Key Features gives Staff its own explicit functionality ("record new purchases") even though Sprint 3's text names only customer & admin dashboards; a nested-only entry point under Customer would under-serve a role the doc explicitly calls out.
 - A separate admin-only List Report for RewardPolicy and TierThreshold management.
 
 ## Deliverables (mapped to the source doc's table)
