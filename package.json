@@ -1,0 +1,109 @@
+{
+  "name": "loyalty-rewards",
+  "version": "1.0.0",
+  "description": "Retail Omni-Channel Customer Loyalty & Rewards Management",
+  "license": "UNLICENSED",
+  "private": true,
+  "dependencies": {
+    "@sap/cds": "^8",
+    "@sap/xssec": "^4",
+    "@cap-js/postgres": "^1",
+    "@cap-js/hana": "^1",
+    "@cap-js/change-tracking": "^1"
+  },
+  "devDependencies": {
+    "@cap-js/sqlite": "^1",
+    "@sap/cds-dk": "^8"
+  },
+  "scripts": {
+    "start": "cds-serve",
+    "watch": "cds watch",
+    "test": "node --test test/"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "cds": {
+    "requires": {
+      "db": {
+        "kind": "sql"
+      },
+      "[development]": {
+        "db": {
+          "kind": "postgres"
+        },
+        "auth": {
+          "kind": "mocked",
+          "users": {
+            "alice": {
+              "password": "pass",
+              "roles": [
+                "customer"
+              ],
+              "attr": {
+                "email": "alice@example.com"
+              }
+            },
+            "bob": {
+              "password": "pass",
+              "roles": [
+                "staff"
+              ]
+            },
+            "carol": {
+              "password": "pass",
+              "roles": [
+                "admin"
+              ]
+            }
+          }
+        }
+      },
+      "[test]": {
+        "db": {
+          "kind": "sqlite",
+          "credentials": {
+            "url": ":memory:"
+          }
+        },
+        "auth": {
+          "kind": "mocked",
+          "users": {
+            "alice": {
+              "password": "",
+              "roles": [
+                "customer"
+              ],
+              "attr": {
+                "email": "alice@example.com"
+              }
+            },
+            "bob": {
+              "password": "",
+              "roles": [
+                "staff"
+              ]
+            },
+            "carol": {
+              "password": "",
+              "roles": [
+                "admin"
+              ]
+            }
+          }
+        }
+      },
+      "[production]": {
+        "db": {
+          "kind": "hana"
+        },
+        "auth": {
+          "kind": "xsuaa"
+        }
+      }
+    }
+  },
+  "allowScripts": {
+    "better-sqlite3@11.10.0": true
+  }
+}
