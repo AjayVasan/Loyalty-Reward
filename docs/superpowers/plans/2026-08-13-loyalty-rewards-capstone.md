@@ -414,11 +414,17 @@ module.exports = { computeTier }
 let policies = new Map()
 let thresholds = []
 
+// Bare SELECT (not srv.run/srv.tx) joins whatever transaction is already active
+// (cds.db's own at bootstrap, or the current request's when called from an
+// after-handler in Task 7) instead of opening a nested one — a nested srv.tx()
+// here deadlocks against sqlite's single connection when called mid-request.
+// It also bypasses @restrict, which is fine: this is trusted internal config
+// loading, not a user-facing read.
 async function load(srv) {
   const { RewardPolicies, TierThresholds } = srv.entities
-  const rates = await srv.run(SELECT.from(RewardPolicies))
+  const rates = await SELECT.from(RewardPolicies)
   policies = new Map(rates.map(r => [r.channel, r.pointsPerCurrencyUnit]))
-  thresholds = await srv.run(SELECT.from(TierThresholds))
+  thresholds = await SELECT.from(TierThresholds)
 }
 
 function rateFor(channel) {
@@ -548,32 +554,49 @@ module.exports = (srv) => {
     const newLifetimePoints = customer.lifetimePoints + pointsEarned
     const newTier = computeTier(newLifetimePoints, policyCache.getThresholds())
 
-    await srv.run(UPDATE(Customers, customerKey).set({
+    // Bare UPDATE (not srv.run/srv.tx) targets cds.db directly, inside the current
+    // request's own transaction — no nested transaction (a nested srv.tx() from
+    // inside an active request deadlocks against sqlite's single connection), and
+    // no @restrict check (this is internal system logic triggered by an
+    // already-authorized Transaction CREATE; no role is granted direct
+    // Customer-write in srv/service.cds, so all point changes are forced through
+    // this validated path).
+    await UPDATE(Customers, customerKey).set({
       totalPoints: customer.totalPoints + pointsEarned,
       lifetimePoints: newLifetimePoints,
       tier: newTier
-    }))
+    })
   })
 }
 ```
 
 - [ ] **Step 4: Implement `srv/service.js`**
 
+The cache load is deferred to `cds.on('served', ...)` — the service's own generic
+handlers (needed for `srv.run(SELECT...)` inside `policyCache.load`) aren't attached
+yet while this init function itself is running.
+
 ```js
 // srv/service.js
+const cds = require('@sap/cds')
 const policyCache = require('./lib/policy-cache')
 const registerTransactionHandlers = require('./handlers/transaction')
 
-module.exports = async (srv) => {
+module.exports = (srv) => {
   registerTransactionHandlers(srv)
-  await policyCache.load(srv)
+
+  cds.on('served', async () => {
+    await policyCache.load(srv)
+  })
 }
 ```
 
 - [ ] **Step 5: Run test to verify it passes**
 
 Run: `NODE_ENV=test node --test test/srv/transaction.test.js`
-Expected: PASS
+Expected: PASS. If you see a 403 on the internal Customer update or a hang/timeout,
+check that the update in Step 3 uses a bare `UPDATE(...)` (not `srv.run`/`srv.tx`) —
+see the comment in that step for why.
 
 - [ ] **Step 6: Commit**
 
@@ -686,9 +709,12 @@ module.exports = (srv) => {
 
     req.data.redeemDate = req.data.redeemDate || new Date().toISOString()
 
-    await srv.run(UPDATE(Customers, customerKey).set({
+    // Bare UPDATE, same reasoning as Task 5's transaction handler: stays in the
+    // current transaction (no nested-tx deadlock) and bypasses @restrict (no role
+    // has direct Customer-write; only this validated path may change totalPoints).
+    await UPDATE(Customers, customerKey).set({
       totalPoints: customer.totalPoints - pointsUsed
-    }))
+    })
   })
 }
 ```
@@ -697,14 +723,18 @@ module.exports = (srv) => {
 
 ```js
 // srv/service.js
+const cds = require('@sap/cds')
 const policyCache = require('./lib/policy-cache')
 const registerTransactionHandlers = require('./handlers/transaction')
 const registerRedemptionHandlers = require('./handlers/redemption')
 
-module.exports = async (srv) => {
+module.exports = (srv) => {
   registerTransactionHandlers(srv)
   registerRedemptionHandlers(srv)
-  await policyCache.load(srv)
+
+  cds.on('served', async () => {
+    await policyCache.load(srv)
+  })
 }
 ```
 
@@ -793,16 +823,20 @@ module.exports = (srv) => {
 
 ```js
 // srv/service.js
+const cds = require('@sap/cds')
 const policyCache = require('./lib/policy-cache')
 const registerTransactionHandlers = require('./handlers/transaction')
 const registerRedemptionHandlers = require('./handlers/redemption')
 const registerPolicyHandlers = require('./handlers/policy')
 
-module.exports = async (srv) => {
+module.exports = (srv) => {
   registerTransactionHandlers(srv)
   registerRedemptionHandlers(srv)
   registerPolicyHandlers(srv)
-  await policyCache.load(srv)
+
+  cds.on('served', async () => {
+    await policyCache.load(srv)
+  })
 }
 ```
 
