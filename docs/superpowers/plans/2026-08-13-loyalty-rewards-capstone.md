@@ -53,7 +53,7 @@
   "scripts": {
     "start": "cds-serve",
     "watch": "cds watch",
-    "test": "node --test test/"
+    "test": "NODE_ENV=test node --test test/"
   },
   "engines": {
     "node": ">=20"
@@ -162,7 +162,7 @@ test('seed data loads: 2 reward policies, 3 tier thresholds, 1 demo customer', a
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `node --test test/schema.test.js`
+Run: `NODE_ENV=test node --test test/schema.test.js`
 Expected: FAIL — no model / entities found (`db/schema.cds` doesn't exist yet).
 
 - [ ] **Step 3: Write the domain model**
@@ -239,7 +239,7 @@ Gold,20000
 
 - [ ] **Step 5: Run test to verify it passes**
 
-Run: `node --test test/schema.test.js`
+Run: `NODE_ENV=test node --test test/schema.test.js`
 Expected: PASS
 
 - [ ] **Step 6: Commit**
@@ -298,7 +298,7 @@ test('customer sees only their own record and cannot read reward policies', asyn
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `node --test test/srv/auth.test.js`
+Run: `NODE_ENV=test node --test test/srv/auth.test.js`
 Expected: FAIL — `srv/service.cds` doesn't exist, no service to serve.
 
 - [ ] **Step 3: Write the service definition**
@@ -345,7 +345,7 @@ annotate LoyaltyService.TierThresholds with @(restrict: [
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `node --test test/srv/auth.test.js`
+Run: `NODE_ENV=test node --test test/srv/auth.test.js`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -391,7 +391,7 @@ test('computeTier picks the highest threshold met', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `node --test test/lib/tier.test.js`
+Run: `NODE_ENV=test node --test test/lib/tier.test.js`
 Expected: FAIL — `srv/lib/tier.js` doesn't exist.
 
 - [ ] **Step 3: Implement `srv/lib/tier.js`**
@@ -436,7 +436,7 @@ module.exports = { load, rateFor, getThresholds }
 
 - [ ] **Step 5: Run test to verify it passes**
 
-Run: `node --test test/lib/tier.test.js`
+Run: `NODE_ENV=test node --test test/lib/tier.test.js`
 Expected: PASS
 
 - [ ] **Step 6: Commit**
@@ -506,7 +506,7 @@ test('an invalid channel is rejected with 400', async () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `node --test test/srv/transaction.test.js`
+Run: `NODE_ENV=test node --test test/srv/transaction.test.js`
 Expected: FAIL — no `before CREATE` handler exists yet, so `pointsEarned`/customer totals stay at 0 and the first assertion fails.
 
 - [ ] **Step 3: Implement `srv/handlers/transaction.js`**
@@ -572,7 +572,7 @@ module.exports = async (srv) => {
 
 - [ ] **Step 5: Run test to verify it passes**
 
-Run: `node --test test/srv/transaction.test.js`
+Run: `NODE_ENV=test node --test test/srv/transaction.test.js`
 Expected: PASS
 
 - [ ] **Step 6: Commit**
@@ -655,7 +655,7 @@ test('redeeming more points than the balance is rejected with 400 and balance is
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `node --test test/srv/redemption.test.js`
+Run: `NODE_ENV=test node --test test/srv/redemption.test.js`
 Expected: FAIL — no validation/decrement handler exists yet.
 
 - [ ] **Step 3: Implement `srv/handlers/redemption.js`**
@@ -710,7 +710,7 @@ module.exports = async (srv) => {
 
 - [ ] **Step 5: Run test to verify it passes**
 
-Run: `node --test test/srv/redemption.test.js`
+Run: `NODE_ENV=test node --test test/srv/redemption.test.js`
 Expected: PASS
 
 - [ ] **Step 6: Commit**
@@ -768,7 +768,7 @@ test('admin updating the Online rate is immediately reflected in the next purcha
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `node --test test/srv/policy-cache.test.js`
+Run: `NODE_ENV=test node --test test/srv/policy-cache.test.js`
 Expected: FAIL — `pointsEarned` is `50` (stale cached rate from Task 4's bootstrap load), not `100`.
 
 - [ ] **Step 3: Implement `srv/handlers/policy.js`**
@@ -808,7 +808,7 @@ module.exports = async (srv) => {
 
 - [ ] **Step 5: Run test to verify it passes**
 
-Run: `node --test test/srv/policy-cache.test.js`
+Run: `NODE_ENV=test node --test test/srv/policy-cache.test.js`
 Expected: PASS
 
 - [ ] **Step 6: Commit**
@@ -860,7 +860,7 @@ test('a purchase that changes totalPoints creates a Change History entry for the
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `node --test test/srv/change-tracking.test.js`
+Run: `NODE_ENV=test node --test test/srv/change-tracking.test.js`
 Expected: FAIL — `/changes` navigation doesn't exist (404 or similar), since `Customer` isn't change-tracked yet.
 
 - [ ] **Step 3: Extend the domain entities with the changelog aspect**
@@ -897,7 +897,7 @@ annotate LoyaltyService.TierThresholds {
 
 - [ ] **Step 5: Run test to verify it passes**
 
-Run: `node --test test/srv/change-tracking.test.js`
+Run: `NODE_ENV=test node --test test/srv/change-tracking.test.js`
 Expected: PASS. If the request to `/changes` 404s, first run `node --test test/srv/change-tracking.test.js` with `console.log` of the raw response to inspect the actual generated navigation/entity name from `@cap-js/change-tracking` in your installed version, and adjust the URL in the test to match — the field names shown here (`changes`) match the plugin's documented Node.js convention but should be empirically confirmed against your installed version before treating this step as done.
 
 - [ ] **Step 6: Commit**
