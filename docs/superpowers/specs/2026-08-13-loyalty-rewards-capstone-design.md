@@ -37,9 +37,11 @@ Given entities kept as specified, with justified additions only (no unrelated fi
 
 *Why `lifetimePoints`*: if `tier` were derived from `totalPoints` alone, a Gold customer who fully redeems drops to Bronze instantly — punishing the behavior (redemption) the program should encourage. Real loyalty programs (airlines, retail) separate status-qualifying points from spendable balance for this reason. `lifetimePoints` is additive-only; `tier` is recomputed from it, never from `totalPoints`.
 
-**Transaction** — as given: `txnID` (UUID, key), `customerID` (association to Customer), `channel` (String — "Online"/"Store"), `amount` (Decimal(10,2)), `txnDate` (DateTime), `pointsEarned` (Integer, computed by handler).
+**Transaction** — as given: `txnID` (UUID, key), `customer` (association to Customer — renamed from the spec's literal `customerID`; see note below), `channel` (String — "Online"/"Store"), `amount` (Decimal(10,2)), `txnDate` (DateTime), `pointsEarned` (Integer, computed by handler).
 
-**Redemption** — as given: `redeemID` (UUID, key), `customerID` (association to Customer), `pointsUsed` (Integer), `redeemDate` (DateTime), `remarks` (String).
+**Redemption** — as given: `redeemID` (UUID, key), `customer` (association to Customer, same rename), `pointsUsed` (Integer), `redeemDate` (DateTime), `remarks` (String).
+
+*Why the association is named `customer`, not `customerID`*: CAP's FK-column naming convention is `<association-name>_<target-key-name>`. Since Customer's key is itself named `customerID`, an association literally named `customerID` would generate the column/OData property `customerID_customerID` — visible everywhere (payloads, Fiori UI, handler code). Renaming the association to `customer` produces a clean `customer_customerID` column while the concept and target are unchanged.
 
 **RewardPolicy** (new) — `policyID` (UUID, key), `channel` (String, unique — "Online"/"Store"), `pointsPerCurrencyUnit` (Decimal(5,2)). Admin-editable. *Why*: the source doc requires "Admin: define and modify reward policies" but the given Domain Modelling section has no entity for it — this fills that gap.
 
