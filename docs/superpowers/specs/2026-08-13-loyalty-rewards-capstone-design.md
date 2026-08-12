@@ -96,7 +96,9 @@ One Fiori Elements app bundle in `app/`, bound to the single CAP service:
 | Deployment Steps | `docs/05-deployment-steps.md` (BAS → Build Code → Cloud Foundry) |
 | Build Code prompts | `docs/06-build-code-prompts.md` — Joule/Build Code prompts to (re)generate each artifact, for the user to run in their own BTP subaccount to produce the actual "executed to display output" evidence, since this session has no live Build Code access |
 
-## Seed data (initial values, admin-editable afterward)
+## Seed data (initial DB rows only — not hardcoded, not a departure from the cache design above)
+
+These are the starting contents of the `RewardPolicy`/`TierThreshold` **DB tables** on first deploy, supplied as CAP seed CSVs (`db/data/RewardPolicy.csv`, `db/data/TierThreshold.csv`) — the same seeding mechanism used for any CAP entity's initial data, nothing special-cased. No value here is read as a constant anywhere in code. On bootstrap these DB rows are loaded into the in-memory cache described above; every `pointsEarned`/tier computation reads only the cache. When admin edits a rate/threshold via the UI, the handler updates the DB row and the cache in the same request (write-through) — the change is permanent (survives restarts) because the DB row changed, not because of anything in code.
 
 - RewardPolicy: Online = 0.05 points/₹, Store = 0.03 points/₹ (matches the source doc's example and rewards the online channel more, per its stated business reason).
 - TierThreshold: Bronze = 0, Silver = 5000, Gold = 20000 lifetime points.
