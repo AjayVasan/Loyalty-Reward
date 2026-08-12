@@ -53,7 +53,7 @@
   "scripts": {
     "start": "cds-serve",
     "watch": "cds watch",
-    "test": "NODE_ENV=test node --test test/"
+    "test": "NODE_ENV=test node --test"
   },
   "engines": {
     "node": ">=20"
