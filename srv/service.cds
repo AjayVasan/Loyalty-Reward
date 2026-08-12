@@ -34,3 +34,17 @@ annotate LoyaltyService.RewardPolicies with @(restrict: [
 annotate LoyaltyService.TierThresholds with @(restrict: [
   { grant: '*', to: 'admin' }
 ]);
+
+annotate LoyaltyService.Customers {
+  totalPoints    @changelog;
+  lifetimePoints @changelog;
+  tier           @changelog;
+};
+
+annotate LoyaltyService.RewardPolicies {
+  pointsPerCurrencyUnit @changelog;
+};
+
+annotate LoyaltyService.TierThresholds {
+  minLifetimePoints @changelog;
+};

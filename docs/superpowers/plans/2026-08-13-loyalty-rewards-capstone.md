@@ -857,13 +857,12 @@ git commit -m "Write-through cache reload on RewardPolicy/TierThreshold changes"
 ### Task 8: Audit trail via change-tracking
 
 **Files:**
-- Create: `db/change-tracking.cds`
 - Modify: `srv/service.cds`
 - Test: `test/srv/change-tracking.test.js`
 
 **Interfaces:**
 - Consumes: `@cap-js/change-tracking` (installed in Task 1's `package.json`).
-- Produces: a `changes` navigation association auto-added to `Customers`/`RewardPolicies`/`TierThresholds` by the `changelog.changeTracked` aspect, exposed at `/odata/v4/loyalty/Customers/<key>/changes` etc.
+- Produces: a `changes` navigation association auto-added to `Customers`/`RewardPolicies`/`TierThresholds` by the plugin's compile hook (triggered by the `@changelog` field annotations below — no explicit `extend` needed), exposed at `/odata/v4/loyalty/Customers/<key>/changes` etc.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -897,17 +896,16 @@ test('a purchase that changes totalPoints creates a Change History entry for the
 Run: `NODE_ENV=test node --test test/srv/change-tracking.test.js`
 Expected: FAIL — `/changes` navigation doesn't exist (404 or similar), since `Customer` isn't change-tracked yet.
 
-- [ ] **Step 3: Extend the domain entities with the changelog aspect**
+- [ ] **Step 3: `db/change-tracking.cds` is not needed for this package version**
 
-```cds
-// db/change-tracking.cds
-using { sap.changelog as changelog } from '@cap-js/change-tracking';
-using { loyalty } from './schema';
-
-extend loyalty.Customer with changelog.changeTracked;
-extend loyalty.RewardPolicy with changelog.changeTracked;
-extend loyalty.TierThreshold with changelog.changeTracked;
-```
+The `extend ... with sap.changelog.changeTracked` pattern shown in SAP's docs is
+Java-specific — that aspect doesn't exist in the `@cap-js/change-tracking` npm
+package (confirmed by reading `node_modules/@cap-js/change-tracking/index.cds`
+and `cds-plugin.js`: its `enhanceModel()` compile hook auto-detects any entity
+with an `@changelog`-annotated element via `isChangeTracked()` and adds the
+`changes` association and Change History UI facet itself — no explicit `extend`
+required). Leave `db/change-tracking.cds` absent (or, if created, empty other
+than a comment) and rely on Step 4's field annotations alone.
 
 - [ ] **Step 4: Annotate which fields are tracked, in `srv/service.cds`**
 
@@ -932,12 +930,13 @@ annotate LoyaltyService.TierThresholds {
 - [ ] **Step 5: Run test to verify it passes**
 
 Run: `NODE_ENV=test node --test test/srv/change-tracking.test.js`
-Expected: PASS. If the request to `/changes` 404s, first run `node --test test/srv/change-tracking.test.js` with `console.log` of the raw response to inspect the actual generated navigation/entity name from `@cap-js/change-tracking` in your installed version, and adjust the URL in the test to match — the field names shown here (`changes`) match the plugin's documented Node.js convention but should be empirically confirmed against your installed version before treating this step as done.
+Expected: PASS — confirmed working with `/Customers/{id}/changes` against
+`@cap-js/change-tracking@1.2.2`.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add db/change-tracking.cds srv/service.cds test/srv/change-tracking.test.js
+git add srv/service.cds test/srv/change-tracking.test.js
 git commit -m "Add DB-backed audit trail via @cap-js/change-tracking"
 ```
 
