@@ -20,7 +20,8 @@
     "start": "cds-serve",
     "watch": "cds watch",
     "test": "NODE_ENV=test CDS_PLUGIN_UI5_ACTIVE=false node --test 'test/**/*.test.js'",
-    "watch-customers-app": "cds watch --open customersapp/index.html?sap-ui-xx-viewCache=false --livereload false"
+    "watch-customers-app": "cds watch --open customersapp/index.html?sap-ui-xx-viewCache=false --livereload false",
+    "watch-transactions-app": "cds watch --open transactionsapp/index.html?sap-ui-xx-viewCache=false --livereload false"
   },
   "engines": {
     "node": ">=20"
@@ -112,6 +113,7 @@
     "app/*"
   ],
   "sapux": [
-    "app/customers-app"
+    "app/customers-app",
+    "app/transactions-app"
   ]
 }

@@ -25,6 +25,24 @@ annotate LoyaltyService.Transactions with @(
   ]
 );
 
+annotate LoyaltyService.Transactions with {
+  customerID @(
+    Common: {
+      Text: customerID.name,
+      TextArrangement: #TextOnly,
+      ValueList: {
+        Label: 'Customers',
+        CollectionPath: 'Customers',
+        Parameters: [
+          { $Type: 'Common.ValueListParameterInOut', LocalDataProperty: customerID_customerID, ValueListProperty: 'customerID' },
+          { $Type: 'Common.ValueListParameterDisplayOnly', ValueListProperty: 'name' },
+          { $Type: 'Common.ValueListParameterDisplayOnly', ValueListProperty: 'email' }
+        ]
+      }
+    }
+  )
+};
+
 annotate LoyaltyService.Redemptions with @(
   UI.LineItem: [
     { Value: redeemDate }, { Value: pointsUsed }, { Value: remarks }
