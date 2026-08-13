@@ -14,8 +14,9 @@ npm test        # 12 automated tests, in-memory SQLite, ~2s
 cds watch        # local dev server on http://localhost:4004
 ```
 
-Mock users for local dev (see `package.json`'s `cds.requires.auth`): `alice`/`customer`,
-`bob`/`staff`, `carol`/`admin` (blank password locally).
+Mock users (see `package.json`'s `cds.requires.auth`): `alice`/`customer`, `bob`/`staff`,
+`carol`/`admin`. Password is `pass` under `cds watch` (`[development]` profile) and blank under
+`npm test` (`[test]` profile).
 
 ## Project structure
 
