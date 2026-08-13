@@ -22,7 +22,7 @@ choices so the two can be merged:
 ```bash
 npm test
 ```
-Confirm all 14 automated tests pass (this uses an in-memory SQLite DB, no external service
+Confirm all 16 automated tests pass (this uses an in-memory SQLite DB, no external service
 needed).
 
 ```bash

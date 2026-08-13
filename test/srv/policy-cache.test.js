@@ -25,3 +25,20 @@ test('admin updating the Online rate is immediately reflected in the next purcha
 
   assert.equal(txn.pointsEarned, 100)
 })
+
+test('admin creating a RewardPolicy with an invalid channel is rejected with 400', async () => {
+  await assert.rejects(
+    POST('/odata/v4/loyalty/RewardPolicies', {
+      channel: 'Marketplace', pointsPerCurrencyUnit: 0.01
+    }, { auth: adminAuth }),
+    /400/
+  )
+})
+
+test('admin can define a new tier in TierThreshold beyond Bronze/Silver/Gold (deliberately not an enum)', async () => {
+  const { data: platinum } = await POST('/odata/v4/loyalty/TierThresholds', {
+    tier: 'Platinum', minLifetimePoints: 50000
+  }, { auth: adminAuth })
+
+  assert.equal(platinum.tier, 'Platinum')
+})

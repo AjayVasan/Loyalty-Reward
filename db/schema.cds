@@ -8,7 +8,9 @@ entity Customer : managed {
   email            : String(254);
   totalPoints      : Integer default 0;
   lifetimePoints   : Integer default 0;
-  tier             : String(10) enum { Bronze; Silver; Gold } default 'Bronze';
+  // Not a CDS enum: TierThreshold is deliberately open-ended (see there) — computeTier()
+  // picks up whatever tier names exist as TierThreshold rows, with no hardcoded list.
+  tier             : String(10) default 'Bronze';
   transactions     : Association to many Transaction on transactions.customerID = $self;
   redemptions      : Association to many Redemption on redemptions.customerID = $self;
 }
@@ -40,7 +42,10 @@ entity RewardPolicy : managed {
 }
 
 entity TierThreshold : managed {
-  key tier             : String(10) enum { Bronze; Silver; Gold };
+  // Deliberately not a CDS enum: this table exists so admins can define/extend the tier
+  // ladder (see srv/lib/tier.js's computeTier, which hardcodes no tier names) without a
+  // schema or code change — constraining `tier` here would defeat that purpose.
+  key tier             : String(10);
   minLifetimePoints    : Integer;
 }
 

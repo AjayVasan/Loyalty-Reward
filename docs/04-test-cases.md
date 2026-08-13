@@ -1,6 +1,6 @@
 # Test Case Sheet
 
-12 of the 14 automated cases below are listed as scenarios (the remaining 2 are low-level unit
+14 of the 16 automated cases below are listed as scenarios (the remaining 2 are low-level unit
 tests — `test/schema.test.js`, `test/lib/tier.test.js` — not user-facing scenarios, so they're not
 given their own row here). All pass via `npm test` (Node's built-in `node:test` + `@sap/cds`'s
 `cds.test()` harness against an in-memory SQLite database).
@@ -18,17 +18,19 @@ given their own row here). All pass via `npm test` (Node's built-in `node:test` 
 | 9 | Redemption within balance | POST Redemption, pointsUsed <= totalPoints | 200; totalPoints decremented; lifetimePoints/tier unchanged | test/srv/redemption.test.js |
 | 10 | Redemption over balance rejected | POST Redemption, pointsUsed > totalPoints | 400; totalPoints unchanged | test/srv/redemption.test.js |
 | 11 | Live rate change | Admin PATCHes Online rate 0.05→0.10, then a purchase is recorded | New purchase uses 0.10, no restart needed | test/srv/policy-cache.test.js |
-| 12 | Audit trail on points change | Purchase changes Customer.totalPoints | A Change History entry exists under /Customers/{id}/changes | test/srv/change-tracking.test.js |
-| 13 | Tier survives full redemption | Reach Gold via purchases, redeem down to 0 totalPoints | tier remains Gold (lifetimePoints untouched) | manual — see below |
-| 14 | RewardPolicy channel uniqueness | Attempt to create a second RewardPolicy row with channel=Online | Rejected by @assert.unique | manual — see below |
+| 12 | RewardPolicy with an invalid channel rejected | Admin POSTs RewardPolicy, channel=Marketplace | 400 (CDS `enum` alone does not enforce this — see README) | test/srv/policy-cache.test.js |
+| 13 | Admin can add a new tier beyond Bronze/Silver/Gold | Admin POSTs TierThreshold, tier=Platinum | 201 — `tier` is deliberately not a CDS enum, see README | test/srv/policy-cache.test.js |
+| 14 | Audit trail on points change | Purchase changes Customer.totalPoints | A Change History entry exists under /Customers/{id}/changes | test/srv/change-tracking.test.js |
+| 15 | Tier survives full redemption | Reach Gold via purchases, redeem down to 0 totalPoints | tier remains Gold (lifetimePoints untouched) | manual — see below |
+| 16 | RewardPolicy channel uniqueness | Attempt to create a second RewardPolicy row with channel=Online | Rejected by @assert.unique | manual — see below |
 
-## Manual test 13 — tier survives full redemption
+## Manual test 15 — tier survives full redemption
 
 1. As staff (`bob`), POST several Transactions for the demo customer until `lifetimePoints >= 20000` (Gold).
 2. As the customer (`alice`), POST a Redemption for the full `totalPoints` balance.
 3. GET the customer record: `tier` is still `Gold`, `totalPoints` is `0`, `lifetimePoints` is unchanged.
 
-## Manual test 14 — RewardPolicy uniqueness
+## Manual test 16 — RewardPolicy uniqueness
 
 1. As admin (`carol`), POST a new RewardPolicy with `channel: "Online"`.
 2. Expect a 400 rejection referencing the `channel` uniqueness constraint.
@@ -37,10 +39,10 @@ given their own row here). All pass via `npm test` (Node's built-in `node:test` 
 
 | # | Scenario | Expected |
 |---|---|---|
-| 15 | Customer Loyalty app renders | List Report shows the demo customer; Object Page shows Purchases/Redemptions/Change History facets |
-| 16 | Record Purchase app, customer search | Typing in the customer field on a new Transaction shows a value-help matching by name/email |
-| 17 | Admin apps blocked in UI for non-admin | Reward Policies / Tier Thresholds apps return 403 when accessed as staff/customer |
-| 18 | channel/tier fields have no native dropdown | Even though `channel`/`tier` are CDS `enum`s, the Transactions/RewardPolicies/TierThresholds forms still render them as free-text inputs — enum alone only adds `Validation.AllowedValues` to $metadata; a real dropdown needs an explicit `@Common.ValueListWithFixedValues` + `@Common.ValueList` annotation, not yet added (see README's Design decisions) |
+| 17 | Customer Loyalty app renders | List Report shows the demo customer; Object Page shows Purchases/Redemptions/Change History facets |
+| 18 | Record Purchase app, customer search | Typing in the customer field on a new Transaction shows a value-help matching by name/email |
+| 19 | Admin apps blocked in UI for non-admin | Reward Policies / Tier Thresholds apps return 403 when accessed as staff/customer |
+| 20 | `channel` field has no native dropdown | Even though `channel` is a CDS `enum`, the Transactions/RewardPolicies forms still render it as free text — enum alone only adds `Validation.AllowedValues` to $metadata; a real dropdown needs an explicit `@Common.ValueListWithFixedValues` + `@Common.ValueList` annotation, not yet added (see README's Design decisions) |
 
 ## Environment note
 

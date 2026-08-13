@@ -1,7 +1,6 @@
 const policyCache = require('../lib/policy-cache')
 const { computeTier } = require('../lib/tier')
-
-const VALID_CHANNELS = ['Online', 'Store']
+const { VALID_CHANNELS } = require('../lib/channels')
 
 module.exports = (srv) => {
   const { Transactions, Customers } = srv.entities

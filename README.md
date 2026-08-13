@@ -10,7 +10,7 @@ BTP Cloud Foundry with SAP HANA Cloud.
 
 ```bash
 npm install
-npm test        # 14 automated tests, in-memory SQLite, ~2s
+npm test        # 16 automated tests, in-memory SQLite, ~2s
 cds watch        # local dev server on http://localhost:4004
 ```
 
@@ -27,7 +27,7 @@ srv/ui-annotations.cds  Fiori UI annotations (List Report/Object Page/value-help
 srv/handlers/            Transaction, Redemption, RewardPolicy/TierThreshold write-through
 srv/lib/                 policy-cache.js (in-memory rate cache), tier.js (pure tier logic)
 app/                     4 Fiori Elements apps: customers, transactions, reward-policy, tier-threshold
-test/                    14 automated tests (node:test + cds.test())
+test/                    16 automated tests (node:test + cds.test())
 docs/                    Deliverables: overview, data model, sprint plan, test cases, deployment, Build Code prompts
 docs/superpowers/specs/  Full design spec with every decision's reasoning
 docs/superpowers/plans/  Task-by-task implementation plan (as actually executed, including bugs found/fixed)
@@ -126,18 +126,31 @@ as an ApplicationService-only generic handler. This was verified with a real tes
 (`test/srv/transaction.test.js`), not assumed — `Customer.modifiedAt/modifiedBy` do update
 correctly even through the bare-UPDATE path.
 
-### Why `channel`/`tier` are CDS `enum`s, and why that alone doesn't give a UI dropdown
+### Why `channel` is a CDS `enum` but `tier` is not (a mistake made and corrected)
 
-Constraining `channel` (`Online`/`Store`) and `tier` (`Bronze`/`Silver`/`Gold`) to CDS enums is a
-pure addition — the field names and allowed values are unchanged — that gets the allowed-value set
-into the OData `$metadata` (`Validation.AllowedValues`) instead of leaving it implicit in
-`transaction.js`'s manual validation array. That said, this alone does **not** make Fiori Elements
-render `channel`/`tier` as a select/dropdown in the generated apps — `Validation.AllowedValues` is
-a documentation/validation annotation, not the one Fiori's templates read for input controls. A
-real fixed-value dropdown needs an explicit `@Common.ValueListWithFixedValues` + `@Common.ValueList`
-annotation (the same mechanism `srv/ui-annotations.cds` already uses for the `Transactions.customerID`
-value-help) — not added here, and left as a documented gap (test case #18 in
-`docs/04-test-cases.md`) rather than silently claimed as done.
+`channel` (`Transaction.channel`, `RewardPolicy.channel`) is a CDS `enum { Online; Store }`. This
+doesn't remove any flexibility that wasn't already gone — `srv/lib/channels.js`'s `VALID_CHANNELS`
+already hardcodes exactly those two values, since `policyCache.rateFor(channel)` can only ever
+resolve a channel that has a matching `RewardPolicy` row anyway. The enum just also puts that same
+allowed-value set into the OData `$metadata` (`Validation.AllowedValues`).
+
+`tier` was briefly made an enum too (`Bronze`/`Silver`/`Gold`) and then reverted — that one *was* a
+real regression, not a harmless addition. `srv/lib/tier.js`'s `computeTier()` hardcodes no tier
+names at all; it picks whichever `TierThreshold` row matches a customer's `lifetimePoints`, which
+means an admin can add a `Platinum` tier today with zero code changes — the entire reason
+`TierThreshold` is a table instead of a hardcoded list (see above). Enum-constraining `tier` would
+have quietly closed that door. Caught via `test/srv/policy-cache.test.js`'s
+"admin can define a new tier ... (deliberately not an enum)" test, which asserts a `Platinum`
+`TierThreshold` row can still be created.
+
+One more thing worth being explicit about: CDS `enum` does **not** reject invalid values at
+runtime by itself — verified empirically (`POST RewardPolicies { channel: 'Foobar' }` succeeded
+with `201` before a real fix was added). `Validation.AllowedValues` is a documentation/design-time
+annotation, not enforcement, and separately not what Fiori Elements reads to render a dropdown
+(that needs `@Common.ValueListWithFixedValues` + `@Common.ValueList`, not added here — see test
+case #20 in `docs/04-test-cases.md`). The actual enforcement for `channel` is
+`srv/handlers/transaction.js`'s before-CREATE check (pre-existing) and the equivalent one now
+added to `srv/handlers/policy.js` for `RewardPolicy.channel`, which previously had none at all.
 
 ## Full documentation
 
