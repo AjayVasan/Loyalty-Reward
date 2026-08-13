@@ -10,7 +10,7 @@ BTP Cloud Foundry with SAP HANA Cloud.
 
 ```bash
 npm install
-npm test        # 12 automated tests, in-memory SQLite, ~2s
+npm test        # 14 automated tests, in-memory SQLite, ~2s
 cds watch        # local dev server on http://localhost:4004
 ```
 
@@ -27,7 +27,7 @@ srv/ui-annotations.cds  Fiori UI annotations (List Report/Object Page/value-help
 srv/handlers/            Transaction, Redemption, RewardPolicy/TierThreshold write-through
 srv/lib/                 policy-cache.js (in-memory rate cache), tier.js (pure tier logic)
 app/                     4 Fiori Elements apps: customers, transactions, reward-policy, tier-threshold
-test/                    12 automated tests (node:test + cds.test())
+test/                    14 automated tests (node:test + cds.test())
 docs/                    Deliverables: overview, data model, sprint plan, test cases, deployment, Build Code prompts
 docs/superpowers/specs/  Full design spec with every decision's reasoning
 docs/superpowers/plans/  Task-by-task implementation plan (as actually executed, including bugs found/fixed)
@@ -110,6 +110,34 @@ problem to cache away, and no conflict with the caching decision above. Scoped t
 `Customer.totalPoints/lifetimePoints/tier` and `RewardPolicy`/`TierThreshold`'s rate/threshold
 fields only — `Transaction`/`Redemption` are already append-only ledger rows, so tracking
 "changes" to something never updated after creation would be a no-op.
+
+### Why every entity also has `: managed` (createdAt/createdBy/modifiedAt/modifiedBy)
+
+`@cap-js/change-tracking` only covers field-level *value* history on the entities it's scoped to
+above — it says nothing about `Transaction`/`Redemption`, which as noted are append-only and
+excluded there. But knowing *who* logged a purchase and *when* it actually hit the DB (as opposed
+to `txnDate`, the business date supplied by the caller) is real, missing audit info, so all five
+entities extend the standard `managed` aspect from `@sap/cds/common` instead of hand-rolling those
+four fields. One implementation detail worth calling out: `srv/handlers/transaction.js` and
+`srv/handlers/redemption.js` update `Customer` via a bare `UPDATE` straight to `cds.db`, which
+bypasses `@restrict` (see the note above) — but `managed`'s population turned out *not* to be
+bypassed by that, since `@cds.on.insert`/`@cds.on.update` are handled at the persistence layer, not
+as an ApplicationService-only generic handler. This was verified with a real test
+(`test/srv/transaction.test.js`), not assumed — `Customer.modifiedAt/modifiedBy` do update
+correctly even through the bare-UPDATE path.
+
+### Why `channel`/`tier` are CDS `enum`s, and why that alone doesn't give a UI dropdown
+
+Constraining `channel` (`Online`/`Store`) and `tier` (`Bronze`/`Silver`/`Gold`) to CDS enums is a
+pure addition — the field names and allowed values are unchanged — that gets the allowed-value set
+into the OData `$metadata` (`Validation.AllowedValues`) instead of leaving it implicit in
+`transaction.js`'s manual validation array. That said, this alone does **not** make Fiori Elements
+render `channel`/`tier` as a select/dropdown in the generated apps — `Validation.AllowedValues` is
+a documentation/validation annotation, not the one Fiori's templates read for input controls. A
+real fixed-value dropdown needs an explicit `@Common.ValueListWithFixedValues` + `@Common.ValueList`
+annotation (the same mechanism `srv/ui-annotations.cds` already uses for the `Transactions.customerID`
+value-help) — not added here, and left as a documented gap (test case #18 in
+`docs/04-test-cases.md`) rather than silently claimed as done.
 
 ## Full documentation
 

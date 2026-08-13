@@ -1,29 +1,31 @@
+using { managed } from '@sap/cds/common';
+
 namespace loyalty;
 
-entity Customer {
+entity Customer : managed {
   key customerID   : UUID;
   name             : String(120);
   email            : String(254);
   totalPoints      : Integer default 0;
   lifetimePoints   : Integer default 0;
-  tier             : String(10) default 'Bronze';
+  tier             : String(10) enum { Bronze; Silver; Gold } default 'Bronze';
   transactions     : Association to many Transaction on transactions.customerID = $self;
   redemptions      : Association to many Redemption on redemptions.customerID = $self;
 }
 
-entity Transaction {
+entity Transaction : managed {
   key txnID        : UUID;
   // Named `customerID` per the source spec's literal Domain Modelling table.
   // Because Customer's own key is also `customerID`, this generates the
   // physical/OData column `customerID_customerID` — kept deliberately.
   customerID       : Association to Customer;
-  channel          : String(10);
+  channel          : String(10) enum { Online; Store };
   amount           : Decimal(10,2);
   txnDate          : DateTime;
   pointsEarned     : Integer default 0;
 }
 
-entity Redemption {
+entity Redemption : managed {
   key redeemID     : UUID;
   customerID       : Association to Customer;
   pointsUsed       : Integer;
@@ -31,14 +33,14 @@ entity Redemption {
   remarks          : String(255);
 }
 
-entity RewardPolicy {
+entity RewardPolicy : managed {
   key policyID             : UUID;
-  channel                  : String(10);
+  channel                  : String(10) enum { Online; Store };
   pointsPerCurrencyUnit    : Decimal(5,2);
 }
 
-entity TierThreshold {
-  key tier             : String(10);
+entity TierThreshold : managed {
+  key tier             : String(10) enum { Bronze; Silver; Gold };
   minLifetimePoints    : Integer;
 }
 

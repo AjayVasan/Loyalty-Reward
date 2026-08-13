@@ -2,7 +2,7 @@
 
 This session doesn't have live access to SAP Build Code's cloud UI (Joule), so the actual CAP
 project was hand-built here — in BAS-equivalent local development, backed by real `cds compile`,
-`cds watch`, and an automated test suite (12/12 passing) — rather than through Build Code's
+`cds watch`, and an automated test suite (14/14 passing) — rather than through Build Code's
 generative chat interface. Section A below is what you'd actually paste into Joule's command
 palette in your BAS dev space to reproduce or extend the four Fiori apps — that's the part of this
 project Joule's slash commands genuinely cover. Section B is honest about the part they don't:

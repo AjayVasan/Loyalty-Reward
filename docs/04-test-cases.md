@@ -1,7 +1,9 @@
 # Test Case Sheet
 
-All 12 automated cases below pass via `npm test` (Node's built-in `node:test` +
-`@sap/cds`'s `cds.test()` harness against an in-memory SQLite database).
+12 of the 14 automated cases below are listed as scenarios (the remaining 2 are low-level unit
+tests — `test/schema.test.js`, `test/lib/tier.test.js` — not user-facing scenarios, so they're not
+given their own row here). All pass via `npm test` (Node's built-in `node:test` + `@sap/cds`'s
+`cds.test()` harness against an in-memory SQLite database).
 
 | # | Scenario | Steps | Expected Result | Automated in |
 |---|---|---|---|---|
@@ -11,20 +13,22 @@ All 12 automated cases below pass via `npm test` (Node's built-in `node:test` +
 | 4 | Customer sees only own record | GET /Customers as alice | 200, exactly 1 row (alice's) | test/srv/auth.test.js |
 | 5 | Online purchase points | POST Transaction, channel=Online, amount=1000 | pointsEarned=50 (rate 0.05); Customer.totalPoints/lifetimePoints += 50 | test/srv/transaction.test.js |
 | 6 | Invalid channel rejected | POST Transaction, channel=Mail | 400 | test/srv/transaction.test.js |
-| 7 | Redemption within balance | POST Redemption, pointsUsed <= totalPoints | 200; totalPoints decremented; lifetimePoints/tier unchanged | test/srv/redemption.test.js |
-| 8 | Redemption over balance rejected | POST Redemption, pointsUsed > totalPoints | 400; totalPoints unchanged | test/srv/redemption.test.js |
-| 9 | Live rate change | Admin PATCHes Online rate 0.05→0.10, then a purchase is recorded | New purchase uses 0.10, no restart needed | test/srv/policy-cache.test.js |
-| 10 | Audit trail on points change | Purchase changes Customer.totalPoints | A Change History entry exists under /Customers/{id}/changes | test/srv/change-tracking.test.js |
-| 11 | Tier survives full redemption | Reach Gold via purchases, redeem down to 0 totalPoints | tier remains Gold (lifetimePoints untouched) | manual — see below |
-| 12 | RewardPolicy channel uniqueness | Attempt to create a second RewardPolicy row with channel=Online | Rejected by @assert.unique | manual — see below |
+| 7 | Transaction carries managed createdBy/createdAt | POST Transaction as bob | Transaction.createdBy = 'bob', createdAt is set | test/srv/transaction.test.js |
+| 8 | Customer's managed fields update via the point-earning handler | POST Transaction, compare Customer.modifiedAt/modifiedBy before/after | modifiedAt changes, modifiedBy = requesting user — holds even though that handler writes via a bare UPDATE that bypasses @restrict (see srv/handlers/transaction.js) | test/srv/transaction.test.js |
+| 9 | Redemption within balance | POST Redemption, pointsUsed <= totalPoints | 200; totalPoints decremented; lifetimePoints/tier unchanged | test/srv/redemption.test.js |
+| 10 | Redemption over balance rejected | POST Redemption, pointsUsed > totalPoints | 400; totalPoints unchanged | test/srv/redemption.test.js |
+| 11 | Live rate change | Admin PATCHes Online rate 0.05→0.10, then a purchase is recorded | New purchase uses 0.10, no restart needed | test/srv/policy-cache.test.js |
+| 12 | Audit trail on points change | Purchase changes Customer.totalPoints | A Change History entry exists under /Customers/{id}/changes | test/srv/change-tracking.test.js |
+| 13 | Tier survives full redemption | Reach Gold via purchases, redeem down to 0 totalPoints | tier remains Gold (lifetimePoints untouched) | manual — see below |
+| 14 | RewardPolicy channel uniqueness | Attempt to create a second RewardPolicy row with channel=Online | Rejected by @assert.unique | manual — see below |
 
-## Manual test 11 — tier survives full redemption
+## Manual test 13 — tier survives full redemption
 
 1. As staff (`bob`), POST several Transactions for the demo customer until `lifetimePoints >= 20000` (Gold).
 2. As the customer (`alice`), POST a Redemption for the full `totalPoints` balance.
 3. GET the customer record: `tier` is still `Gold`, `totalPoints` is `0`, `lifetimePoints` is unchanged.
 
-## Manual test 12 — RewardPolicy uniqueness
+## Manual test 14 — RewardPolicy uniqueness
 
 1. As admin (`carol`), POST a new RewardPolicy with `channel: "Online"`.
 2. Expect a 400 rejection referencing the `channel` uniqueness constraint.
@@ -33,9 +37,10 @@ All 12 automated cases below pass via `npm test` (Node's built-in `node:test` +
 
 | # | Scenario | Expected |
 |---|---|---|
-| 13 | Customer Loyalty app renders | List Report shows the demo customer; Object Page shows Purchases/Redemptions/Change History facets |
-| 14 | Record Purchase app, customer search | Typing in the customer field on a new Transaction shows a value-help matching by name/email |
-| 15 | Admin apps blocked in UI for non-admin | Reward Policies / Tier Thresholds apps return 403 when accessed as staff/customer |
+| 15 | Customer Loyalty app renders | List Report shows the demo customer; Object Page shows Purchases/Redemptions/Change History facets |
+| 16 | Record Purchase app, customer search | Typing in the customer field on a new Transaction shows a value-help matching by name/email |
+| 17 | Admin apps blocked in UI for non-admin | Reward Policies / Tier Thresholds apps return 403 when accessed as staff/customer |
+| 18 | channel/tier fields have no native dropdown | Even though `channel`/`tier` are CDS `enum`s, the Transactions/RewardPolicies/TierThresholds forms still render them as free-text inputs — enum alone only adds `Validation.AllowedValues` to $metadata; a real dropdown needs an explicit `@Common.ValueListWithFixedValues` + `@Common.ValueList` annotation, not yet added (see README's Design decisions) |
 
 ## Environment note
 

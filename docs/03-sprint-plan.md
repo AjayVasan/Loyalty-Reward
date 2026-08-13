@@ -47,4 +47,4 @@
   correct.
 - As a QA reviewer, I have a test case sheet covering CRUD, points logic, and redemption
   validation. *Acceptance criteria:* `docs/04-test-cases.md` (this deliverable), full `npm test`
-  suite green (12/12 tests).
+  suite green (14/14 tests).
