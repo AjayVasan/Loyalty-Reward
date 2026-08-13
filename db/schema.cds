@@ -7,6 +7,8 @@ entity Customer {
   totalPoints      : Integer default 0;
   lifetimePoints   : Integer default 0;
   tier             : String(10) default 'Bronze';
+  transactions     : Association to many Transaction on transactions.customerID = $self;
+  redemptions      : Association to many Redemption on redemptions.customerID = $self;
 }
 
 entity Transaction {

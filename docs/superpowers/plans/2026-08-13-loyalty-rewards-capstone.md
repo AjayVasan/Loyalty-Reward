@@ -11,6 +11,7 @@
 ## Global Constraints
 
 - Single CAP project, single `mta.yaml`, single deploy — no additional services or microservices (per approved design spec).
+- **Once any Fiori app exists under `app/`** (from Task 9 onward), automated tests MUST run with `CDS_PLUGIN_UI5_ACTIVE=false` in the environment (already wired into `package.json`'s `test` script). Without it, `cds-plugin-ui5` auto-starts a livereload/proxy dev server on every `cds.test()` boot, which holds the process open indefinitely — `node --test` then appears to hang forever (each individual test's assertions may have already passed; the process just never exits). This was diagnosed by comparing hung runs against clean single-file runs pre-Task-9, confirming the timing correlated exactly with the Fiori app's addition.
 - Field/entity names copied from the source PDF's Domain Modelling table are kept **literally**, including the `customerID` association name on `Transaction`/`Redemption` — even though this produces the generated column `customerID_customerID` (CAP's `<association>_<target-key>` convention, since Customer's own key is also `customerID`). Do not rename it.
 - Seed values: RewardPolicy — Online = `0.05`, Store = `0.03` (points per ₹1). TierThreshold — Bronze = `0`, Silver = `5000`, Gold = `20000` lifetime points.
 - Mock users for dev/test: `alice` (role `customer`, attr `email: alice@example.com`), `bob` (role `staff`), `carol` (role `admin`).
@@ -997,13 +998,14 @@ Add the corresponding backlink associations so the facets above resolve — modi
   redemptions  : Association to many Redemption on redemptions.customerID = $self;
 ```
 
-- [ ] **Step 2: Reference the annotations file from the service**
+- [ ] **Step 2: No explicit `using` needed from `srv/service.cds`**
 
-Add to the top of `srv/service.cds`, after the existing `using` line:
-
-```cds
-using from './ui-annotations';
-```
+CAP auto-loads every `.cds` file under `db/` and `srv/` regardless of explicit
+`using` reachability (confirmed in Task 8: `db/change-tracking.cds` was picked
+up with no `using` chain pointing to it). Do NOT add
+`using from './ui-annotations';` to `srv/service.cds` — since
+`ui-annotations.cds` itself does `using { LoyaltyService } from './service'`,
+adding the reverse reference creates a circular `using` between the two files.
 
 - [ ] **Step 3: Verify the model still compiles**
 
@@ -1012,6 +1014,13 @@ Expected: no errors.
 
 - [ ] **Step 4: Generate the Fiori Elements app**
 
+Prerequisite: the `generate_fiori_app_cap` MCP tool requires `@sap/generator-fiori`
+(>=1.18.5) installed in the **system-wide** global npm location it resolves from —
+not a project-local or alternate-toolchain global install. If you're using a
+non-system Node install (as this plan's Task 1 does, for the better-sqlite3/Node-22
+fix), you'll need `sudo npm install -g @sap/generator-fiori` using the system's
+default `npm` before this step works; confirm with the user before running `sudo`.
+
 First load the tool schema (mandatory per the sap-fiori-mcp-server's own protocol): call `ToolSearch` with `select:mcp__plugin_sap-fiori-mcp-server_fiori-mcp__generate_fiori_app_cap`. Then call it with:
 - `floorplan`: `FE_LROP`
 - `project.name`: `customers-app`, `project.targetFolder`: absolute path to this repo root, `project.title`: `Customer Loyalty`
@@ -1019,17 +1028,46 @@ First load the tool schema (mandatory per the sap-fiori-mcp-server's own protoco
 - `service.capService.projectPath`: absolute path to this repo root, `service.capService.serviceName`: `LoyaltyService`, `service.capService.serviceCdsPath`: `srv/service.cds`, `service.capService.capType`: `Node.js`
 - `entityConfig.mainEntity.entityName`: `Customers`, `generateLROPAnnotations`: `true`, `generateFormAnnotations`: `true`
 
-Expected: `app/customers-app/webapp/manifest.json` is created referencing `LoyaltyService`/`Customers`.
+Expected: `app/customers-app/webapp/manifest.json` is created referencing
+`LoyaltyService`/`Customers`. This also modifies `package.json` (adds
+`cds-plugin-ui5`, a `workspaces` field, a `sapux` field, and a
+`watch-customers-app` script) — run `npm install` afterward to pick up the new
+dependency.
 
-- [ ] **Step 5: Smoke-test the app**
+- [ ] **Step 5: Add `CDS_PLUGIN_UI5_ACTIVE=false` to the test script — required from this point on**
+
+Once any app exists under `app/`, `cds-plugin-ui5` auto-starts a livereload/proxy
+dev server on every `cds.test()` boot, which holds the Node process open forever
+— `node --test` then hangs indefinitely (individual tests' assertions may have
+already passed; the process just never exits to report results). Update
+`package.json`'s `test` script:
+
+```json
+"test": "NODE_ENV=test CDS_PLUGIN_UI5_ACTIVE=false node --test 'test/**/*.test.js'"
+```
+
+(The `'test/**/*.test.js'` glob, rather than a bare `test/` directory argument,
+also matters here: Node's default `--test` auto-discovery recursively picks up
+**every** `.js` file under any directory literally named `test/` — including
+the Fiori app's `webapp/test/integration/*.js` OPA5 journey files, which aren't
+Node-executable and will themselves hang waiting on browser infrastructure that
+doesn't exist in this environment.)
+
+- [ ] **Step 6: Run the full test suite to verify nothing regressed**
+
+Run: `npm test`
+Expected: all tests (including Tasks 2–8's) still pass, now completing in a few
+seconds rather than hanging.
+
+- [ ] **Step 7: Smoke-test the app**
 
 Run: `npx cds watch` in one terminal, then in another: `curl -u carol: http://localhost:4004/odata/v4/loyalty/Customers`
 Expected: 200 with the seeded Alice Johnson record. Also open `http://localhost:4004/customers-app/webapp/index.html` (or the URL `cds watch` prints for the app) in a browser and confirm the List Report renders.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
-git add srv/ui-annotations.cds srv/service.cds db/schema.cds app/customers-app/
+git add -A
 git commit -m "Add Customer Fiori Elements app with Transactions/Redemptions/Change History facets"
 ```
 

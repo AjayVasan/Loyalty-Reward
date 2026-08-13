@@ -13,12 +13,14 @@
   },
   "devDependencies": {
     "@cap-js/sqlite": "^1",
-    "@sap/cds-dk": "^8"
+    "@sap/cds-dk": "^8",
+    "cds-plugin-ui5": "^0.17.0"
   },
   "scripts": {
     "start": "cds-serve",
     "watch": "cds watch",
-    "test": "NODE_ENV=test node --test"
+    "test": "NODE_ENV=test CDS_PLUGIN_UI5_ACTIVE=false node --test 'test/**/*.test.js'",
+    "watch-customers-app": "cds watch --open customersapp/index.html?sap-ui-xx-viewCache=false --livereload false"
   },
   "engines": {
     "node": ">=20"
@@ -105,5 +107,11 @@
   },
   "allowScripts": {
     "better-sqlite3@11.10.0": true
-  }
+  },
+  "workspaces": [
+    "app/*"
+  ],
+  "sapux": [
+    "app/customers-app"
+  ]
 }
