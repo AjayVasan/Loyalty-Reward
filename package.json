@@ -104,7 +104,8 @@
         },
         "auth": {
           "kind": "xsuaa"
-        }
+        },
+        "html5-runtime": true
       }
     }
   },

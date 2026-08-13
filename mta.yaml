@@ -1,0 +1,171 @@
+_schema-version: 3.3.0
+ID: loyalty-rewards
+version: 1.0.0
+description: "Retail Omni-Channel Customer Loyalty &amp; Rewards Management"
+parameters:
+  enable-parallel-deployments: true
+  deploy_mode: html5-repo
+build-parameters:
+  before-all:
+    - builder: custom
+      commands:
+        - npm ci
+        - npx cds build --production
+modules:
+  - name: loyalty-rewards-srv
+    type: nodejs
+    path: gen/srv
+    parameters:
+      instances: 1
+      buildpack: nodejs_buildpack
+    build-parameters:
+      builder: npm-ci
+    provides:
+      - name: srv-api # required by consumers of CAP services (e.g. approuter)
+        properties:
+          srv-url: ${default-url}
+    requires:
+      - name: loyalty-rewards-auth
+      - name: loyalty-rewards-db
+
+  - name: loyalty-rewards
+    type: approuter.nodejs
+    path: app/router
+    parameters:
+      keep-existing-routes: true
+      disk-quota: 256M
+      memory: 256M
+    requires:
+      - name: srv-api
+        group: destinations
+        properties:
+          name: srv-api # must be used in xs-app.json as well
+          url: ~{srv-url}
+          forwardAuthToken: true
+      - name: loyalty-rewards-auth
+      - name: loyalty-rewards-html5-runtime
+    provides:
+      - name: app-api
+        properties:
+          app-protocol: ${protocol}
+          app-uri: ${default-uri}
+
+  - name: loyalty-rewards-db-deployer
+    type: hdb
+    path: gen/db
+    parameters:
+      buildpack: nodejs_buildpack
+    requires:
+      - name: loyalty-rewards-db
+
+  - name: loyalty-rewards-app-deployer
+    type: com.sap.application.content
+    path: gen
+    requires:
+      - name: loyalty-rewards-html5-repo-host
+        parameters:
+          content-target: true
+    build-parameters:
+      build-result: app/
+      requires:
+        - name: loyaltyrewardscustomersapp
+          artifacts:
+            - customers-app.zip
+          target-path: app/
+        - name: loyaltyrewardsrewardpolicyapp
+          artifacts:
+            - reward-policy-app.zip
+          target-path: app/
+        - name: loyaltyrewardstierthresholdapp
+          artifacts:
+            - tier-threshold-app.zip
+          target-path: app/
+        - name: loyaltyrewardstransactionsapp
+          artifacts:
+            - transactions-app.zip
+          target-path: app/
+
+  - name: loyaltyrewardscustomersapp
+    type: html5
+    path: app/customers-app
+    build-parameters:
+      build-result: dist
+      builder: custom
+      commands:
+        - npm ci
+        - npm run build
+      supported-platforms:
+        []
+  - name: loyaltyrewardsrewardpolicyapp
+    type: html5
+    path: app/reward-policy-app
+    build-parameters:
+      build-result: dist
+      builder: custom
+      commands:
+        - npm ci
+        - npm run build
+      supported-platforms:
+        []
+  - name: loyaltyrewardstierthresholdapp
+    type: html5
+    path: app/tier-threshold-app
+    build-parameters:
+      build-result: dist
+      builder: custom
+      commands:
+        - npm ci
+        - npm run build
+      supported-platforms:
+        []
+  - name: loyaltyrewardstransactionsapp
+    type: html5
+    path: app/transactions-app
+    build-parameters:
+      build-result: dist
+      builder: custom
+      commands:
+        - npm ci
+        - npm run build
+      supported-platforms:
+        []
+
+resources:
+  - name: loyalty-rewards-auth
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: xsuaa
+      service-plan: application
+      path: ./xs-security.json
+      config:
+        xsappname: loyalty-rewards-${org}-${space}
+        tenant-mode: dedicated
+        role-collections:
+          - name: 'Loyalty-Customer (${space})'
+            description: 'Loyalty program customer'
+            role-template-references:
+              - '$XSAPPNAME.customer'
+          - name: 'Loyalty-Staff (${space})'
+            description: 'Retail staff'
+            role-template-references:
+              - '$XSAPPNAME.staff'
+          - name: 'Loyalty-Admin (${space})'
+            description: 'Loyalty program admin'
+            role-template-references:
+              - '$XSAPPNAME.admin'
+  - name: loyalty-rewards-db
+    type: com.sap.xs.hdi-container
+    parameters:
+      service: hana
+      service-plan: hdi-shared
+
+  - name: loyalty-rewards-html5-repo-host
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: html5-apps-repo
+      service-plan: app-host
+  - name: loyalty-rewards-html5-runtime
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: html5-apps-repo
+      service-plan: app-runtime
