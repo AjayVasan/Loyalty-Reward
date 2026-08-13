@@ -48,3 +48,21 @@ annotate LoyaltyService.Redemptions with @(
     { Value: redeemDate }, { Value: pointsUsed }, { Value: remarks }
   ]
 );
+
+annotate LoyaltyService.RewardPolicies with @(
+  UI: {
+    HeaderInfo: { TypeName: 'Reward Policy', TypeNamePlural: 'Reward Policies', Title: { Value: channel } },
+    LineItem: [ { Value: channel }, { Value: pointsPerCurrencyUnit } ],
+    Facets: [ { $Type: 'UI.ReferenceFacet', Label: 'Change History', Target: 'changes/@UI.PresentationVariant' } ]
+  }
+) {
+  policyID @UI.Hidden;
+};
+
+annotate LoyaltyService.TierThresholds with @(
+  UI: {
+    HeaderInfo: { TypeName: 'Tier Threshold', TypeNamePlural: 'Tier Thresholds', Title: { Value: tier } },
+    LineItem: [ { Value: tier }, { Value: minLifetimePoints } ],
+    Facets: [ { $Type: 'UI.ReferenceFacet', Label: 'Change History', Target: 'changes/@UI.PresentationVariant' } ]
+  }
+);
